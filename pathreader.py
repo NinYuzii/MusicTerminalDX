@@ -24,7 +24,8 @@ def Get_Dir_Folder(stdsrc):
     
 def Reproducir_Musica(Index):
         player.play(str(musiclist[Index]))
-        stdscr.addstr(1,60,"Reproduciendo: " + musiclist[Index].name)
+        stdscr.clear()
+        stdscr.addstr(0,60,"Reproduciendo: " + musiclist[Index].name)
         
 
 
@@ -50,20 +51,29 @@ def Mostrar_Musica(stdscr, musiclist, path):
         downcoordinate += 1
     stdscr.refresh()
     selected = 0
-    stdscr.addstr(selected,0,musiclist[selected].name[0:musiclist[selected].name.find(".mp3")], curses.A_REVERSE)
     while(True):
-        stdscr.refresh()
         currentTrack = musiclist[selected]
-        stdscr.addstr(selected,0,currentTrack.name[0:currentTrack.name.find(".mp3")], curses.A_REVERSE)
-        key = stdscr.getch()
 
+        for mp3 in musiclist:
+            if(mp3 == currentTrack):
+                if(selected <= height - 1):
+                    stdscr.addstr(selected,0,currentTrack.name[0:currentTrack.name.find(".mp3")], curses.A_REVERSE)
+            else:
+                if(musiclist.index(mp3) <= height - 1):
+                    stdscr.addstr(musiclist.index(mp3),0,mp3.name[0:mp3.name.find(".mp3")])
+        
+
+        stdscr.refresh()
+        key = stdscr.getch()
         if(key == curses.KEY_UP and selected != 0):
             selected -= 1
         elif(key == curses.KEY_DOWN and selected < len(musiclist) - 1):
             selected += 1
         elif key in (10, 13, curses.KEY_ENTER):
-            stdscr.addstr(0, 60, "ENTER DETECTADO")
             Reproducir_Musica(selected)
+        elif(key == ord("q")):
+            player.stop()
+            break
              
     
 
@@ -73,19 +83,20 @@ curses.wrapper(Mostrar_Musica, musiclist, path)
 
 
 #Por lo mientras no usare esta parte del codigo
-while(True):
-    time.sleep(1)
+def Show_Time():
+    while(True):
+        time.sleep(1)
 
-    if player.time_pos is None or player.duration is None:
-        continue
+        if player.time_pos is None or player.duration is None:
+            continue
 
-    actualmin, actualsec = divmod(int(player.time_pos), 60)
-    totalmin, totalsec = divmod(int(player.duration), 60)
+        actualmin, actualsec = divmod(int(player.time_pos), 60)
+        totalmin, totalsec = divmod(int(player.duration), 60)
 
-    print(
-        f"{actualmin}:{actualsec:02}",
-        f"{totalmin}:{totalsec:02}"
-    )
+        print(
+            f"{actualmin}:{actualsec:02}",
+            f"{totalmin}:{totalsec:02}"
+        )
 
 
 
