@@ -17,11 +17,11 @@ def Get_Dir_Folder(stdscr):
     path = Path.home() / stdscr.getstr().decode("utf-8")
     return path
     
-def Play_Music(stdscr, musicList, Index):
+def Play_Music(playWin, musicList, Index):
         player.play(str(musicList[Index]))
-        stdscr.clear()
-        stdscr.addstr(0,60,"Reproduciendo: " + musicList[Index].name)
-        
+        playWin.clear()
+        playWin.addstr(0,0,"Reproduciendo: " + musicList[Index].name)#Si uso lo que reproduce el reproductor actualmente puede fallar, no se actualiza al instante
+        playWin.refresh()
 
 
 def Sort_Playlist(path):
@@ -42,21 +42,26 @@ def Print_MusicList(stdscr, musicList, selected):
 
     #Por cada mp3 en musica lo imprimiremos en pantalla, y el seleccionado con efecto marcado
     for index, mp3 in enumerate(musicList):
-        distancia = abs(selected-index)
-        if(distancia <= 8):
-            indentation = abs(8 - distancia)
+        distance = abs(selected-index)#Determinamos la distance entre el seleccionado y la cancion analizada
+
+        #//Determinar Sangria//#
+        if(distance <= 8):
+            indentation = abs(8 - distance)
         else:
             indentation = 0
-        if(index == selected):
+
+        #//Imprimir canciones//#
+        if(index == selected):#Si el index coincide con la cancion seleccionada entonces la imprimiremos con efecto revertido
             stdscr.addstr(midTerminalPos, indentation - 1,">" + "\u266a  " + currentTrack.name[0:currentTrack.name.find(".mp3")], curses.A_REVERSE)
         else:
-            if(midTerminalPos + (index - selected) <= height - 1 and index > selected):
-                stdscr.addstr(midTerminalPos + (index - selected), indentation, "\u266a " + mp3.name[0:mp3.name.find(".mp3")])  
-            #Si el indice de la cancion es menor al seleccionado entonces
-            elif(midTerminalPos - index <= height - 1 and index < selected):
-                if(midTerminalPos - (selected - index)> -1):
-                    stdscr.addstr(midTerminalPos - (selected - index), indentation, "\u266a " + mp3.name[0:mp3.name.find(".mp3")])
+            if(midTerminalPos + distance <= height - 1 and index > selected):#Aqui con (index > selected) vemos si la cancion analizada esta adelante en la lista
+                stdscr.addstr(midTerminalPos + distance, indentation, "\u266a " + mp3.name[0:mp3.name.find(".mp3")])# Y lo imprimimos abajo
+
+            elif(midTerminalPos - distance <= height - 1 and index < selected): #Lo que estamos haciendo con (index < selected) 
+                if(midTerminalPos - distance > -1):                              #es ver si la cancion esta antes de la seleccionada
+                    stdscr.addstr(midTerminalPos - distance, indentation, "\u266a " + mp3.name[0:mp3.name.find(".mp3")])#para despues imprimirlos arriba
                  
+        #Aqui le hice una modificacion bien chida y simplifique el codigo como un pro (Con distance)
 
 
 
@@ -75,23 +80,27 @@ def Show_Time():
 def Show_Redraw_Music(stdscr, musicList):
     selected = 0
     # Al parecer cualquier funcion que ejecutemos desde esta podra usar la interfaz grafica sin pasarla como argumento
+    height , width = stdscr.getmaxyx()
+    musicListWin = curses.newwin(height, round(width/2), 0, 0)
+    playWin = curses.newwin(height, round(width/2), 0, round(width/2))
 
-    stdscr.keypad(True)
+    musicListWin.keypad(True)
     curses.cbreak()
     curses.noecho()
     stdscr.clear()
-    playlistLength = len(musicList)
+    playlistLength = len(musicList) 
     while(True):
-        stdscr.clear()
-        Print_MusicList(stdscr, musicList, selected)   
-        stdscr.refresh()
-        key = stdscr.getch()
+        musicListWin.clear()
+        Print_MusicList(musicListWin, musicList, selected)
+        musicListWin.refresh()
+        playWin.refresh()
+        key = musicListWin.getch()
         if(key == curses.KEY_UP and selected > 0):
             selected -= 1
         elif(key == curses.KEY_DOWN and selected < playlistLength - 1):
             selected += 1
         elif(key == 10):#* Tecla enter
-            Play_Music(stdscr, musicList, selected)
+            Play_Music(playWin, musicList, selected)
         elif(key == ord("q")):
             player.stop()
             break
