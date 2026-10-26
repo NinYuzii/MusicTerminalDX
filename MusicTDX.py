@@ -2,6 +2,8 @@ from pathlib import Path
 import curses
 import mpv
 import time
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3
 
 
 #Inicializa el audio player(mpv) y tambien iniciamos la interfaz grafica de la terminal
@@ -19,9 +21,12 @@ def Get_Dir_Folder(stdscr):
     
 def Play_Music(playWin, musicList, Index):
         player.play(str(musicList[Index]))
+        mp3info = MP3(musicList[Index], ID3 = ID3)
         playWin.clear()
-        playWin.addstr(0,0,"Reproduciendo: " + musicList[Index].name)#Si uso lo que reproduce el reproductor actualmente puede fallar, no se actualiza al instante
+        playWin.addstr(0,0,"Playing: " + str(mp3info.tags["TIT2"]))#Titulo
+        playWin.addstr(1,0,"Artist: " + str(mp3info.tags["TPE1"]))#Artista
         playWin.refresh()
+        return Index
 
 
 def Sort_Playlist(path):
@@ -38,7 +43,7 @@ def Print_MusicList(stdscr, musicList, selected):
 
     height , width = stdscr.getmaxyx() #Conseguimos la maxima altura de la terminal y la maxima de ancho
     currentTrack = musicList[selected] #La cancion actualmente seleccionada
-    midTerminalPos = round(height/2 - 5) #La mitad de la altura de la terminal
+    midTerminalPos = round(height/2 - 5) #La mitad de la altura de la terminal menos un ajuste para que se vea bien
 
     #Por cada mp3 en musica lo imprimiremos en pantalla, y el seleccionado con efecto marcado
     for index, mp3 in enumerate(musicList):
@@ -78,33 +83,53 @@ def Show_Time():
 
 
 def Show_Redraw_Music(stdscr, musicList):
+    stdscr.clear()
+    stdscr.refresh()
     selected = 0
-    # Al parecer cualquier funcion que ejecutemos desde esta podra usar la interfaz grafica sin pasarla como argumento
+    songEnded = False
+    # Al parecer cualquier funcion que ejecutemos desde esta podra usar la interfaz grafica sin tener que usar wrapper
     height , width = stdscr.getmaxyx()
     musicListWin = curses.newwin(height, round(width/2), 0, 0)
     playWin = curses.newwin(height, round(width/2), 0, round(width/2))
-
     musicListWin.keypad(True)
     curses.cbreak()
     curses.noecho()
-    stdscr.clear()
     playlistLength = len(musicList) 
+    @player.event_callback("end-file")
+    def On_End_File(event):
+        nonlocal songEnded
+        reason = event.data.reason
+        if(reason == 0):
+            songEnded = True
+
     while(True):
+
         musicListWin.clear()
         Print_MusicList(musicListWin, musicList, selected)
         musicListWin.refresh()
-        playWin.refresh()
+        musicListWin.timeout(500)
+        #Se pide un input para poder seguir y si no consigue uno en 500 ms entonces pasara -1 (Leer documentacion es util)
         key = musicListWin.getch()
         if(key == curses.KEY_UP and selected > 0):
             selected -= 1
         elif(key == curses.KEY_DOWN and selected < playlistLength - 1):
             selected += 1
         elif(key == 10):#* Tecla enter
-            Play_Music(playWin, musicList, selected)
+            indOfSong = Play_Music(playWin, musicList, selected)
         elif(key == ord("q")):
             player.stop()
             break
+        elif(key == -1 ):
+            if(songEnded):
+                nextSong = indOfSong + 1
+                if(nextSong < playlistLength - 1):
+                    indOfSong = Play_Music(playWin, musicList, nextSong)
+                    songEnded = False
+                    selected = indOfSong
 
+
+                           
+                    
     
                     
     
